@@ -247,6 +247,12 @@ class QuadrupedFlat : public Task {
   ResidualFn residual_;
 };
 
+class QuadrupedObstacle : public QuadrupedFlat {
+  public:
+    std::string Name() const override;
+    std::string XmlPath() const override;
+};
+
 
 class QuadrupedHill : public Task {
  public:

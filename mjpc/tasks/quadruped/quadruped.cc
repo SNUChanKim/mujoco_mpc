@@ -27,8 +27,12 @@ std::string QuadrupedHill::XmlPath() const {
 std::string QuadrupedFlat::XmlPath() const {
   return GetModelPath("quadruped/task_flat.xml");
 }
+std::string QuadrupedObstacle::XmlPath() const {
+  return GetModelPath("quadruped/task_obstacle.xml");
+}
 std::string QuadrupedHill::Name() const { return "Quadruped Hill"; }
 std::string QuadrupedFlat::Name() const { return "Quadruped Flat"; }
+std::string QuadrupedObstacle::Name() const { return "Quadruped Obstacle"; }
 
 void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
                                          const mjData* data,
