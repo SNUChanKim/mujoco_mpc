@@ -80,7 +80,7 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
   // quadrupedal or bipedal height of torso over feet
   double* torso_pos = data->xipos + 3*torso_body_id_;
   bool is_biped = current_mode_ == kModeBiped;
-  double height_goal = is_biped ? kHeightBiped : kHeightQuadruped;
+  double height_goal = parameters_[ParameterIndex(model, "Height Goal")];
   if (current_mode_ == kModeScramble) {
     // disable height term in Scramble
     residual[counter++] = 0;
@@ -481,9 +481,7 @@ void QuadrupedFlat::ModifyScene(const mjModel* model, const mjData* data,
   }
 
   // capture point
-  bool is_biped = residual_.current_mode_ == ResidualFn::kModeBiped;
-  double height_goal =
-      is_biped ? ResidualFn::kHeightBiped : ResidualFn::kHeightQuadruped;
+  double height_goal = parameters[ParameterIndex(model, "Height Goal")];
   double fall_time = mju_sqrt(2*height_goal / residual_.gravity_);
   double capture[3];
   double* compos = SensorByName(model, data, "torso_subtreecom");

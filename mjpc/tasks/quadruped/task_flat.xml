@@ -29,6 +29,7 @@
     <numeric name="residual_select_Biped type" data="0"/>
     <text name="residual_list_Biped type" data="Foot Stand|Hand Stand"/>
     <numeric name="residual_Heading" data="0 -3.14 3.14" />
+    <numeric name="residual_Height Goal" data="0.25 0 2.0" />
 
     <!-- estimator -->
     <numeric name="estimator" data="0" />
