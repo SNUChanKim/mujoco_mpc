@@ -199,6 +199,17 @@ add_custom_target(
   COMMAND ${Python_EXECUTABLE}
           ${CMAKE_CURRENT_BINARY_DIR}/manipulation/merge_panda_robotiq.py
           ${CMAKE_CURRENT_BINARY_DIR}/manipulation/panda_robotiq.xml
+
+  COMMAND ${CMAKE_COMMAND} -E copy
+          ${menagerie_SOURCE_DIR}/google_barkour_vb/barkour_vb.xml
+          ${CMAKE_CURRENT_BINARY_DIR}/barkour/barkour_vb.xml
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+          ${menagerie_SOURCE_DIR}/google_barkour_vb/assets
+          ${CMAKE_CURRENT_BINARY_DIR}/barkour/assets
+  # apply a patch to barkour_vb.xml
+  COMMAND patch -o ${CMAKE_CURRENT_BINARY_DIR}/barkour/barkour_vb_modified.xml
+          ${CMAKE_CURRENT_BINARY_DIR}/barkour/barkour_vb.xml
+          <${CMAKE_CURRENT_SOURCE_DIR}/barkour/barkour_vb.xml.patch
   COMMENT "Copying Menagerie and dm_control assets into binary directory")
 
 add_custom_target(copy_resources ALL
