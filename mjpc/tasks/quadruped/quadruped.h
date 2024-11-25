@@ -119,7 +119,7 @@ class QuadrupedFlat : public Task {
     constexpr static double kHeightQuadruped = 0.25;  // meter
 
     // target torso height over feet when bipedal
-    constexpr static double kHeightBiped = 0.6;       // meter
+    constexpr static double kHeightBiped = 0.5;       // meter
 
     // radius of foot geoms
     constexpr static double kFootRadius = 0.02;       // meter
@@ -147,7 +147,7 @@ class QuadrupedFlat : public Task {
     A1Gait GetGait() const;
 
     // compute average foot position, depending on mode
-    void AverageFootPos(double avg_foot_pos[3],
+    void AverageFootPos(const mjModel* model, double avg_foot_pos[3],
                         double* foot_pos[kNumFoot]) const;
 
     // return normalized target step height

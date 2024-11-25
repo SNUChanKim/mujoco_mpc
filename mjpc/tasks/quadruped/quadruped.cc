@@ -47,16 +47,16 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
 
   // average foot position
   double avg_foot_pos[3];
-  AverageFootPos(avg_foot_pos, foot_pos);
+  AverageFootPos(model, avg_foot_pos, foot_pos);
 
   double* torso_xmat = data->xmat + 9*torso_body_id_;
   double* goal_pos = data->mocap_pos + 3*goal_mocap_id_;
   double* compos = SensorByName(model, data, "torso_subtreecom");
-
+  double height_goal = parameters_[ParameterIndex(model, "Height Goal")];
 
   // ---------- Upright ----------
   if (current_mode_ != kModeFlip) {
-    if (current_mode_ == kModeBiped) {
+    if (current_mode_ == kModeBiped || height_goal > kHeightBiped) {
       double biped_type = parameters_[biped_type_param_id_];
       int handstand = ReinterpretAsInt(biped_type) ? -1 : 1;
       residual[counter++] = torso_xmat[6] - handstand;
@@ -80,7 +80,6 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
   // quadrupedal or bipedal height of torso over feet
   double* torso_pos = data->xipos + 3*torso_body_id_;
   bool is_biped = current_mode_ == kModeBiped;
-  double height_goal = parameters_[ParameterIndex(model, "Height Goal")];
   if (current_mode_ == kModeScramble) {
     // disable height term in Scramble
     residual[counter++] = 0;
@@ -116,7 +115,7 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
   double step[kNumFoot];
   FootStep(step, GetPhase(data->time), gait);
   for (A1Foot foot : kFootAll) {
-    if (is_biped) {
+    if (is_biped || height_goal > kHeightBiped) {
       // ignore "hands" in biped mode
       bool handstand = ReinterpretAsInt(parameters_[biped_type_param_id_]);
       bool front_hand = !handstand && (foot == kFootFL || foot == kFootFR);
@@ -183,7 +182,7 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
       residual[counter + 3*foot + joint] *= kJointPostureGain[joint];
     }
   }
-  if (current_mode_ == kModeBiped) {
+  if (current_mode_ == kModeBiped || height_goal > kHeightBiped) {
     // loosen the "hands" in Biped mode
     bool handstand = ReinterpretAsInt(parameters_[biped_type_param_id_]);
     if (handstand) {
@@ -203,7 +202,7 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
 
   // ---------- Yaw ----------
   double torso_heading[2] = {torso_xmat[0], torso_xmat[3]};
-  if (current_mode_ == kModeBiped) {
+  if (current_mode_ == kModeBiped || height_goal > kHeightBiped) {
     int handstand =
         ReinterpretAsInt(parameters_[biped_type_param_id_]) ? 1 : -1;
     torso_heading[0] = handstand * torso_xmat[2];
@@ -403,6 +402,7 @@ constexpr float kPcpRgba[4] = {0.5, 0.5, 0.2, 1};   // projected capture point
 // draw task-related geometry in the scene
 void QuadrupedFlat::ModifyScene(const mjModel* model, const mjData* data,
                            mjvScene* scene) const {
+  double height_goal = parameters[ParameterIndex(model, "Height Goal")];
   // flip target pose
   if (residual_.current_mode_ == ResidualFn::kModeFlip) {
     double flip_time = data->time - residual_.mode_start_time_;
@@ -449,7 +449,7 @@ void QuadrupedFlat::ModifyScene(const mjModel* model, const mjData* data,
   // draw step height
   for (ResidualFn::A1Foot foot : ResidualFn::kFootAll) {
     stance_pos[foot][2] = ResidualFn::kFootRadius + ground[foot];
-    if (residual_.current_mode_ == ResidualFn::kModeBiped) {
+    if (residual_.current_mode_ == ResidualFn::kModeBiped || height_goal > ResidualFn::kHeightBiped) {
       // skip "hands" in biped mode
       bool handstand =
           ReinterpretAsInt(parameters[residual_.biped_type_param_id_]);
@@ -481,7 +481,6 @@ void QuadrupedFlat::ModifyScene(const mjModel* model, const mjData* data,
   }
 
   // capture point
-  double height_goal = parameters[ParameterIndex(model, "Height Goal")];
   double fall_time = mju_sqrt(2*height_goal / residual_.gravity_);
   double capture[3];
   double* compos = SensorByName(model, data, "torso_subtreecom");
@@ -493,7 +492,7 @@ void QuadrupedFlat::ModifyScene(const mjModel* model, const mjData* data,
 
   // average foot position
   double feet_pos[3];
-  residual_.AverageFootPos(feet_pos, foot_pos);
+  residual_.AverageFootPos(model ,feet_pos, foot_pos);
   feet_pos[2] = com_ground;
 
   double foot_size[3] = {ResidualFn::kFootRadius, 0, 0};
@@ -603,8 +602,10 @@ void QuadrupedFlat::ResetLocked(const mjModel* model) {
 
 // compute average foot position, depending on mode
 void QuadrupedFlat::ResidualFn::AverageFootPos(
-    double avg_foot_pos[3], double* foot_pos[kNumFoot]) const {
-  if (current_mode_ == kModeBiped) {
+    const mjModel* model, double avg_foot_pos[3], double* foot_pos[kNumFoot]) const {
+  
+  double height_goal = parameters_[ParameterIndex(model, "Height Goal")];
+  if (current_mode_ == kModeBiped || height_goal > kHeightBiped) {
     int handstand = ReinterpretAsInt(parameters_[biped_type_param_id_]);
     if (handstand) {
       mju_add3(avg_foot_pos, foot_pos[kFootFL], foot_pos[kFootFR]);
