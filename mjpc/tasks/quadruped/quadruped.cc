@@ -306,6 +306,10 @@ void QuadrupedFlat::TransitionLocked(mjModel* model, mjData* data) {
     double angvel = parameters[ParameterIndex(model, "Walk turn")];
     double speed = parameters[ParameterIndex(model, "Walk speed")];
 
+    if (angvel == 0) {
+      goal_pos[1] = 0; // for just walking forward
+    }
+
     // current torso direction
     double* torso_xmat = data->xmat + 9*residual_.torso_body_id_;
     double forward[2] = {torso_xmat[0], torso_xmat[3]};
