@@ -246,7 +246,7 @@ void QuadrupedFlat::TransitionLocked(mjModel* model, mjData* data) {
   }
 
   // ---------- handle phase velocity change ----------
-  double phase_velocity = 2 * mjPI * parameters[residual_.cadence_param_id_];
+  double phase_velocity = 2 * mjPI * residual_.cadence_;
   if (phase_velocity != residual_.phase_velocity_) {
     residual_.phase_start_ = residual_.GetPhase(data->time);
     residual_.phase_start_time_ = data->time;
@@ -291,9 +291,10 @@ void QuadrupedFlat::TransitionLocked(mjModel* model, mjData* data) {
   if (gait_selection != residual_.current_gait_) {
     residual_.current_gait_ = gait_selection;
     ResidualFn::A1Gait gait = residual_.GetGait();
-    parameters[residual_.duty_param_id_] = ResidualFn::kGaitParam[gait][0];
-    parameters[residual_.cadence_param_id_] = ResidualFn::kGaitParam[gait][1];
-    parameters[residual_.amplitude_param_id_] = ResidualFn::kGaitParam[gait][2];
+    residual_.duty_ratio_ = ResidualFn::kGaitParam[gait][0];
+    residual_.cadence_ = ResidualFn::kGaitParam[gait][1];
+    residual_.amplitude_ = ResidualFn::kGaitParam[gait][2];
+
     weight[residual_.balance_cost_id_] = ResidualFn::kGaitParam[gait][3];
     weight[residual_.upright_cost_id_] = ResidualFn::kGaitParam[gait][4];
     weight[residual_.height_cost_id_] = ResidualFn::kGaitParam[gait][5];
@@ -523,9 +524,6 @@ void QuadrupedFlat::ResetLocked(const mjModel* model) {
   residual_.gait_switch_param_id_ = ParameterIndex(model, "select_Gait switch");
   residual_.flip_dir_param_id_ = ParameterIndex(model, "select_Flip dir");
   residual_.biped_type_param_id_ = ParameterIndex(model, "select_Biped type");
-  residual_.cadence_param_id_ = ParameterIndex(model, "Cadence");
-  residual_.amplitude_param_id_ = ParameterIndex(model, "Amplitude");
-  residual_.duty_param_id_ = ParameterIndex(model, "Duty ratio");
   residual_.balance_cost_id_ = CostTermByName(model, "Balance");
   residual_.upright_cost_id_ = CostTermByName(model, "Upright");
   residual_.height_cost_id_ = CostTermByName(model, "Height");
@@ -671,11 +669,9 @@ double QuadrupedFlat::ResidualFn::StepHeight(double time, double footphase,
 // compute target step height for all feet
 void QuadrupedFlat::ResidualFn::FootStep(double step[kNumFoot], double time,
                                          A1Gait gait) const {
-  double amplitude = parameters_[amplitude_param_id_];
-  double duty_ratio = parameters_[duty_param_id_];
   for (A1Foot foot : kFootAll) {
     double footphase = 2*mjPI*kGaitPhase[gait][foot];
-    step[foot] = amplitude * StepHeight(time, footphase, duty_ratio);
+    step[foot] = amplitude_ * StepHeight(time, footphase, duty_ratio_);
   }
 }
 

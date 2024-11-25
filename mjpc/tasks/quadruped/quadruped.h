@@ -168,6 +168,11 @@ class QuadrupedFlat : public Task {
     // orientation during flip
     void FlipQuat(double quat[4], double time) const;
 
+    //  ============  gait parameters, managed by kGaitParam  ===========
+    double cadence_ = 2;
+    double amplitude_ = 0.06;
+    double duty_ratio_ = 0;
+
     //  ============  task state variables, managed by Transition  ============
     A1Mode current_mode_       = kModeQuadruped;
     double last_transition_time_ = -1;
@@ -203,9 +208,11 @@ class QuadrupedFlat : public Task {
     int gait_switch_param_id_ = -1;
     int flip_dir_param_id_    = -1;
     int biped_type_param_id_  = -1;
-    int cadence_param_id_     = -1;
-    int amplitude_param_id_   = -1;
-    int duty_param_id_        = -1;
+    
+    // int cadence_param_id_     = -1;
+    // int amplitude_param_id_   = -1;
+    // int duty_param_id_        = -1;
+    
     int upright_cost_id_      = -1;
     int balance_cost_id_      = -1;
     int height_cost_id_       = -1;
