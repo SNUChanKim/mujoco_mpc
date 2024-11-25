@@ -121,6 +121,9 @@ class QuadrupedFlat : public Task {
     // target torso height over feet when bipedal
     constexpr static double kHeightBiped = 0.5;       // meter
 
+    // target heading
+    constexpr static double kHeading = 0.0;       // radian
+
     // radius of foot geoms
     constexpr static double kFootRadius = 0.02;       // meter
 

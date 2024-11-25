@@ -209,7 +209,7 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
     torso_heading[1] = handstand * torso_xmat[5];
   }
   mju_normalize(torso_heading, 2);
-  double heading_goal = parameters_[ParameterIndex(model, "Heading")];
+  double heading_goal = kHeading;
   residual[counter++] = torso_heading[0] - mju_cos(heading_goal);
   residual[counter++] = torso_heading[1] - mju_sin(heading_goal);
 
