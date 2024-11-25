@@ -55,25 +55,16 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
   double height_goal = parameters_[ParameterIndex(model, "Height Goal")];
 
   // ---------- Upright ----------
-  if (current_mode_ != kModeFlip) {
-    if (current_mode_ == kModeBiped || height_goal > kHeightBiped) {
-      double biped_type = parameters_[biped_type_param_id_];
-      int handstand = ReinterpretAsInt(biped_type) ? -1 : 1;
-      residual[counter++] = torso_xmat[6] - handstand;
-    } else {
-      residual[counter++] = torso_xmat[8] - 1;
-    }
-    residual[counter++] = 0;
-    residual[counter++] = 0;
+  if (current_mode_ == kModeBiped || height_goal > kHeightBiped) {
+    double biped_type = parameters_[biped_type_param_id_];
+    int handstand = ReinterpretAsInt(biped_type) ? -1 : 1;
+    residual[counter++] = torso_xmat[6] - handstand;
   } else {
-    // special handling of flip orientation
-    double flip_time = data->time - mode_start_time_;
-    double quat[4];
-    FlipQuat(quat, flip_time);
-    double* torso_xquat = data->xquat + 4*torso_body_id_;
-    mju_subQuat(residual + counter, torso_xquat, quat);
-    counter += 3;
+    residual[counter++] = torso_xmat[8] - 1;
   }
+  residual[counter++] = 0;
+  residual[counter++] = 0;
+  
 
 
   // ---------- Height ----------
@@ -83,10 +74,6 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
   if (current_mode_ == kModeScramble) {
     // disable height term in Scramble
     residual[counter++] = 0;
-  } else if (current_mode_ == kModeFlip) {
-    // height target for Backflip
-    double flip_time = data->time - mode_start_time_;
-    residual[counter++] = torso_pos[2] - FlipHeight(flip_time);
   } else {
     residual[counter++] = (torso_pos[2] - avg_foot_pos[2]) - height_goal;
   }
@@ -166,17 +153,7 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
   // ---------- Posture ----------
   double* home = KeyQPosByName(model, data, "home");
   mju_sub(residual + counter, data->qpos + 7, home + 7, model->nu);
-  if (current_mode_ == kModeFlip) {
-    double flip_time = data->time - mode_start_time_;
-    if (flip_time < crouch_time_) {
-      double* crouch = KeyQPosByName(model, data, "crouch");
-      mju_sub(residual + counter, data->qpos + 7, crouch + 7, model->nu);
-    } else if (flip_time >= crouch_time_ &&
-               flip_time < jump_time_ + flight_time_) {
-      // free legs during flight phase
-      mju_zero(residual + counter, model->nu);
-    }
-  }
+  
   for (A1Foot foot : kFootAll) {
     for (int joint = 0; joint < 3; joint++) {
       residual[counter + 3*foot + joint] *= kJointPostureGain[joint];
@@ -240,7 +217,7 @@ void QuadrupedFlat::TransitionLocked(mjModel* model, mjData* data) {
   if (mode != residual_.current_mode_ &&
       residual_.current_mode_ != ResidualFn::kModeQuadruped) {
     // switch into stateful mode only allowed from Quadruped
-    if (mode == ResidualFn::kModeWalk || mode == ResidualFn::kModeFlip) {
+    if (mode == ResidualFn::kModeWalk) {
       mode = ResidualFn::kModeQuadruped;
     }
   }
@@ -349,49 +326,6 @@ void QuadrupedFlat::TransitionLocked(mjModel* model, mjData* data) {
     residual_.Walk(goal_pos, time);
   }
 
-
-  // ---------- Flip ----------
-  double* compos = SensorByName(model, data, "torso_subtreecom");
-  if (mode == ResidualFn::kModeFlip) {
-    // switching into Flip, reset task state
-    if (mode != residual_.current_mode_) {
-      // save time
-      residual_.mode_start_time_ = data->time;
-
-      // save body orientation, ground height
-      mju_copy4(residual_.orientation_,
-                data->xquat + 4 * residual_.torso_body_id_);
-      residual_.ground_ = Ground(model, data, compos);
-
-      // save parameters
-      residual_.save_weight_ = weight;
-      residual_.save_gait_switch_ = parameters[residual_.gait_switch_param_id_];
-
-      // set parameters
-      weight[CostTermByName(model, "Upright")] = 0.2;
-      weight[CostTermByName(model, "Height")] = 5;
-      weight[CostTermByName(model, "Position")] = 0;
-      weight[CostTermByName(model, "Gait")] = 0;
-      weight[CostTermByName(model, "Balance")] = 0;
-      weight[CostTermByName(model, "Effort")] = 0.005;
-      weight[CostTermByName(model, "Posture")] = 0.1;
-      parameters[residual_.gait_switch_param_id_] = ReinterpretAsDouble(0);
-    }
-
-    // time from start of Flip
-    double flip_time = data->time - residual_.mode_start_time_;
-
-    if (flip_time >=
-        residual_.jump_time_ + residual_.flight_time_ + residual_.land_time_) {
-      // Flip ended, back to Quadruped, restore values
-      mode = ResidualFn::kModeQuadruped;
-      weight = residual_.save_weight_;
-      parameters[residual_.gait_switch_param_id_] = residual_.save_gait_switch_;
-      goal_pos[0] = data->site_xpos[3*residual_.head_site_id_ + 0];
-      goal_pos[1] = data->site_xpos[3*residual_.head_site_id_ + 1];
-    }
-  }
-
   // save mode
   residual_.current_mode_ = static_cast<ResidualFn::A1Mode>(mode);
   residual_.last_transition_time_ = data->time;
@@ -408,23 +342,6 @@ constexpr float kPcpRgba[4] = {0.5, 0.5, 0.2, 1};   // projected capture point
 void QuadrupedFlat::ModifyScene(const mjModel* model, const mjData* data,
                            mjvScene* scene) const {
   double height_goal = parameters[ParameterIndex(model, "Height Goal")];
-  // flip target pose
-  if (residual_.current_mode_ == ResidualFn::kModeFlip) {
-    double flip_time = data->time - residual_.mode_start_time_;
-    double* torso_pos = data->xpos + 3*residual_.torso_body_id_;
-    double pos[3] = {torso_pos[0], torso_pos[1],
-                     residual_.FlipHeight(flip_time)};
-    double quat[4];
-    residual_.FlipQuat(quat, flip_time);
-    double mat[9];
-    mju_quat2Mat(mat, quat);
-    double size[3] = {0.25, 0.15, 0.05};
-    float rgba[4] = {0, 1, 0, 0.5};
-    AddGeom(scene, mjGEOM_BOX, size, pos, mat, rgba);
-
-    // don't draw anything else during flip
-    return;
-  }
 
   // current foot positions
   double* foot_pos[ResidualFn::kNumFoot];
@@ -522,7 +439,6 @@ void QuadrupedFlat::ResetLocked(const mjModel* model) {
   // ----------  task identifiers  ----------
   residual_.gait_param_id_ = ParameterIndex(model, "select_Gait");
   residual_.gait_switch_param_id_ = ParameterIndex(model, "select_Gait switch");
-  residual_.flip_dir_param_id_ = ParameterIndex(model, "select_Flip dir");
   residual_.biped_type_param_id_ = ParameterIndex(model, "select_Biped type");
   residual_.balance_cost_id_ = CostTermByName(model, "Balance");
   residual_.upright_cost_id_ = CostTermByName(model, "Upright");
@@ -558,48 +474,6 @@ void QuadrupedFlat::ResetLocked(const mjModel* model) {
     residual_.shoulder_body_id_[shoulder_index] = foot_id;
     shoulder_index++;
   }
-
-  // ----------  derived kinematic quantities for Flip  ----------
-  residual_.gravity_ = mju_norm3(model->opt.gravity);
-  // velocity at takeoff
-  residual_.jump_vel_ =
-      mju_sqrt(2 * residual_.gravity_ *
-               (ResidualFn::kMaxHeight - ResidualFn::kLeapHeight));
-  // time in flight phase
-  residual_.flight_time_ = 2 * residual_.jump_vel_ / residual_.gravity_;
-  // acceleration during jump phase
-  residual_.jump_acc_ =
-      residual_.jump_vel_ * residual_.jump_vel_ /
-      (2 * (ResidualFn::kLeapHeight - ResidualFn::kCrouchHeight));
-  // time in crouch sub-phase of jump
-  residual_.crouch_time_ =
-      mju_sqrt(2 * (ResidualFn::kHeightQuadruped - ResidualFn::kCrouchHeight) /
-               residual_.jump_acc_);
-  // time in leap sub-phase of jump
-  residual_.leap_time_ = residual_.jump_vel_ / residual_.jump_acc_;
-  // jump total time
-  residual_.jump_time_ = residual_.crouch_time_ + residual_.leap_time_;
-  // velocity at beginning of crouch
-  residual_.crouch_vel_ = -residual_.jump_acc_ * residual_.crouch_time_;
-  // time of landing phase
-  residual_.land_time_ =
-      2 * (ResidualFn::kLeapHeight - ResidualFn::kHeightQuadruped) /
-      residual_.jump_vel_;
-  // acceleration during landing
-  residual_.land_acc_ = residual_.jump_vel_ / residual_.land_time_;
-  // rotational velocity during flight phase (rotates 1.25 pi)
-  residual_.flight_rot_vel_ = 1.25 * mjPI / residual_.flight_time_;
-  // rotational velocity at start of leap (rotates 0.5 pi)
-  residual_.jump_rot_vel_ =
-      mjPI / residual_.leap_time_ - residual_.flight_rot_vel_;
-  // rotational acceleration during leap (rotates 0.5 pi)
-  residual_.jump_rot_acc_ =
-      (residual_.flight_rot_vel_ - residual_.jump_rot_vel_) /
-      residual_.leap_time_;
-  // rotational deceleration during land (rotates 0.25 pi)
-  residual_.land_rot_acc_ =
-      2 * (residual_.flight_rot_vel_ * residual_.land_time_ - mjPI / 4) /
-      (residual_.land_time_ * residual_.land_time_);
 }
 
 // compute average foot position, depending on mode
@@ -674,48 +548,6 @@ void QuadrupedFlat::ResidualFn::FootStep(double step[kNumFoot], double time,
     step[foot] = amplitude_ * StepHeight(time, footphase, duty_ratio_);
   }
 }
-
-// height during flip
-double QuadrupedFlat::ResidualFn::FlipHeight(double time) const {
-  if (time >= jump_time_ + flight_time_ + land_time_) {
-    return kHeightQuadruped + ground_;
-  }
-  double h = 0;
-  if (time < jump_time_) {
-    h = kHeightQuadruped + time * crouch_vel_ + 0.5 * time * time * jump_acc_;
-  } else if (time >= jump_time_ && time < jump_time_ + flight_time_) {
-    time -= jump_time_;
-    h = kLeapHeight + jump_vel_*time - 0.5*9.81*time*time;
-  } else if (time >= jump_time_ + flight_time_) {
-    time -= jump_time_ + flight_time_;
-    h = kLeapHeight - jump_vel_*time + 0.5*land_acc_*time*time;
-  }
-  return h + ground_;
-}
-
-// orientation during flip
-//  total rotation = leap + flight + land
-//            2*pi = pi/2 + 5*pi/4 + pi/4
-void QuadrupedFlat::ResidualFn::FlipQuat(double quat[4], double time) const {
-  double angle = 0;
-  if (time >= jump_time_ + flight_time_ + land_time_) {
-    angle = 2*mjPI;
-  } else if (time >= crouch_time_ && time < jump_time_) {
-    time -= crouch_time_;
-    angle = 0.5 * jump_rot_acc_ * time * time + jump_rot_vel_ * time;
-  } else if (time >= jump_time_ && time < jump_time_ + flight_time_) {
-    time -= jump_time_;
-    angle = mjPI/2 + flight_rot_vel_ * time;
-  } else if (time >= jump_time_ + flight_time_) {
-    time -= jump_time_ + flight_time_;
-    angle = 1.75*mjPI + flight_rot_vel_*time - 0.5*land_rot_acc_ * time * time;
-  }
-  int flip_dir = ReinterpretAsInt(parameters_[flip_dir_param_id_]);
-  double axis[3] = {0, flip_dir ? 1.0 : -1.0, 0};
-  mju_axisAngle2Quat(quat, axis, angle);
-  mju_mulQuat(quat, orientation_, quat);
-}
-
 
 // --------------------- Residuals for quadruped task --------------------
 //   Number of residuals: 4

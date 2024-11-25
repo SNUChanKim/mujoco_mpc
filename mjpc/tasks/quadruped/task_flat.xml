@@ -5,7 +5,7 @@
 
   <custom>
     <!-- agent -->
-    <text name="task_transition" data="Quadruped|Biped|Walk|Scramble|Flip" />
+    <text name="task_transition" data="Quadruped|Biped|Walk|Scramble" />
     <numeric name="agent_planner" data="2 " />
     <numeric name="agent_horizon" data="0.35" />
     <numeric name="agent_timestep" data="0.01" />
@@ -21,11 +21,9 @@
     <text name="residual_list_Gait switch" data="Manual|Automatic"/>
     <numeric name="residual_Walk speed" data="0 0 1"/>
     <numeric name="residual_Walk turn" data="0 -2 2"/>
-    <numeric name="residual_select_Flip dir" data="0"/>
-    <text name="residual_list_Flip dir" data="Back Flip|Front Flip"/>
+    <numeric name="residual_Height Goal" data="0.25 0 2.0" />
     <numeric name="residual_select_Biped type" data="0"/>
     <text name="residual_list_Biped type" data="Foot Stand|Hand Stand"/>
-    <numeric name="residual_Height Goal" data="0.25 0 2.0" />
 
     <!-- estimator -->
     <numeric name="estimator" data="0" />

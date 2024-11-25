@@ -42,7 +42,6 @@ class QuadrupedFlat : public Task {
       kModeBiped,
       kModeWalk,
       kModeScramble,
-      kModeFlip,
       kNumMode
     };
 
@@ -133,15 +132,6 @@ class QuadrupedFlat : public Task {
     // posture gain factors for abduction, hip, knee
     constexpr static double kJointPostureGain[3] = {2, 1, 1};  // unitless
 
-    // flip: crouching height, from which leap is initiated
-    constexpr static double kCrouchHeight = 0.15;     // meter
-
-    // flip: leap height, beginning of flight phase
-    constexpr static double kLeapHeight = 0.5;        // meter
-
-    // flip: maximum height of flight phase
-    constexpr static double kMaxHeight = 0.8;         // meter
-
     //  ============  methods  ============
     // return internal phase clock
     double GetPhase(double time) const;
@@ -162,12 +152,6 @@ class QuadrupedFlat : public Task {
     // walk horizontal position given time
     void Walk(double pos[2], double time) const;
 
-    // height during flip
-    double FlipHeight(double time) const;
-
-    // orientation during flip
-    void FlipQuat(double quat[4], double time) const;
-
     //  ============  gait parameters, managed by kGaitParam  ===========
     double cadence_ = 2;
     double amplitude_ = 0.06;
@@ -186,12 +170,6 @@ class QuadrupedFlat : public Task {
     double speed_             = 0;
     double angvel_            = 0;
 
-    // backflip states
-    double ground_            = 0;
-    double orientation_[4]    = {0};
-    double save_gait_switch_  = 0;
-    std::vector<double> save_weight_;
-
     // gait-related states
     double current_gait_      = kGaitStand;
     double phase_start_       = 0;
@@ -206,7 +184,6 @@ class QuadrupedFlat : public Task {
     int goal_mocap_id_        = -1;
     int gait_param_id_        = -1;
     int gait_switch_param_id_ = -1;
-    int flip_dir_param_id_    = -1;
     int biped_type_param_id_  = -1;
     
     // int cadence_param_id_     = -1;
@@ -221,19 +198,6 @@ class QuadrupedFlat : public Task {
 
     // derived kinematic quantities describing flip trajectory
     double gravity_           = 0;
-    double jump_vel_          = 0;
-    double flight_time_       = 0;
-    double jump_acc_          = 0;
-    double crouch_time_       = 0;
-    double leap_time_         = 0;
-    double jump_time_         = 0;
-    double crouch_vel_        = 0;
-    double land_time_         = 0;
-    double land_acc_          = 0;
-    double flight_rot_vel_    = 0;
-    double jump_rot_vel_      = 0;
-    double jump_rot_acc_      = 0;
-    double land_rot_acc_      = 0;
   };
 
   QuadrupedFlat() : residual_(this) {}
