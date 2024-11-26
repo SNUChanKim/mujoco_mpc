@@ -71,13 +71,8 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
   // quadrupedal or bipedal height of torso over feet
   double* torso_pos = data->xipos + 3*torso_body_id_;
   bool is_biped = current_mode_ == kModeBiped;
-  if (current_mode_ == kModeScramble) {
-    // disable height term in Scramble
-    residual[counter++] = 0;
-  } else {
-    residual[counter++] = (torso_pos[2] - avg_foot_pos[2]) - height_goal;
-  }
-
+  
+  residual[counter++] = (torso_pos[2] - avg_foot_pos[2]) - height_goal;
 
   // ---------- Position ----------
   double* head = data->site_xpos + 3*head_site_id_;
@@ -94,8 +89,7 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
   }
   residual[counter++] = head[0] - target[0];
   residual[counter++] = head[1] - target[1];
-  residual[counter++] =
-      current_mode_ == kModeScramble ? 2 * (head[2] - target[2]) : 0;
+  residual[counter++] = 0;
 
   // ---------- Gait ----------
   A1Gait gait = GetGait();
@@ -114,24 +108,9 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
     }
     double query[3] = {foot_pos[foot][0], foot_pos[foot][1], foot_pos[foot][2]};
 
-    if (current_mode_ == kModeScramble) {
-      double torso_to_goal[3];
-      double* goal = data->mocap_pos + 3*goal_mocap_id_;
-      mju_sub3(torso_to_goal, goal, torso_pos);
-      mju_normalize3(torso_to_goal);
-      mju_sub3(torso_to_goal, goal, foot_pos[foot]);
-      torso_to_goal[2] = 0;
-      mju_normalize3(torso_to_goal);
-      mju_addToScl3(query, torso_to_goal, 0.15);
-    }
-
     double ground_height = Ground(model, data, query);
     double height_target = ground_height + kFootRadius + step[foot];
     double height_difference = foot_pos[foot][2] - height_target;
-    if (current_mode_ == kModeScramble) {
-      // in Scramble, foot higher than target is not penalized
-      height_difference = mju_min(0, height_difference);
-    }
     residual[counter++] = step[foot] ? height_difference : 0;
   }
 
@@ -247,9 +226,6 @@ void QuadrupedFlat::TransitionLocked(mjModel* model, mjData* data) {
   } else if (auto_switch) {
     double com_speed = mju_norm(residual_.com_vel_, 2);
     for (int64_t gait : ResidualFn::kGaitAll) {
-      // scramble requires a non-static gait
-      if (mode == ResidualFn::kModeScramble && gait == ResidualFn::kGaitStand)
-        continue;
       bool lower = com_speed > ResidualFn::kGaitAuto[gait];
       bool upper = com_speed <= ResidualFn::kGaitAuto[gait + 1];
       bool wait = mju_abs(residual_.gait_switch_time_ - data->time) >

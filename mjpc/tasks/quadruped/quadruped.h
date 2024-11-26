@@ -41,7 +41,6 @@ class QuadrupedFlat : public Task {
       kModeQuadruped = 0,
       kModeBiped,
       kModeWalk,
-      kModeScramble,
       kNumMode
     };
 
