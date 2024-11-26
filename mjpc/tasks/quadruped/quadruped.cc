@@ -284,10 +284,6 @@ void QuadrupedFlat::TransitionLocked(mjModel* model, mjData* data) {
     double angvel = parameters[ParameterIndex(model, "Walk turn")];
     double speed = parameters[ParameterIndex(model, "Walk speed")];
 
-    if (angvel == 0) {
-      goal_pos[1] = 0; // for just walking forward
-    }
-
     // current torso direction
     double* torso_xmat = data->xmat + 9*residual_.torso_body_id_;
     double forward[2] = {torso_xmat[0], torso_xmat[3]};
@@ -504,12 +500,12 @@ double QuadrupedFlat::ResidualFn::GetPhase(double time) const {
 
 // horizontal Walk trajectory
 void QuadrupedFlat::ResidualFn::Walk(double pos[2], double time) const {
-  if (mju_abs(angvel_) < kMinAngvel) {
+  if (mju_abs(angvel_) < kMinAngvel) { // just move forward
     // no rotation, go in straight line
     double forward[2] = {heading_[0], heading_[1]};
     mju_normalize(forward, 2);
-    pos[0] = position_[0] + heading_[0] + time*speed_*forward[0];
-    pos[1] = position_[1] + heading_[1] + time*speed_*forward[1];
+    pos[0] = position_[0] + heading_[0] + time*speed_;
+    pos[1] = 0;
   } else {
     // walk on a circle
     double angle = time * angvel_;
