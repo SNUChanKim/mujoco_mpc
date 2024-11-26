@@ -251,8 +251,7 @@ void QuadrupedFlat::TransitionLocked(mjModel* model, mjData* data) {
       if (mode == ResidualFn::kModeScramble && gait == ResidualFn::kGaitStand)
         continue;
       bool lower = com_speed > ResidualFn::kGaitAuto[gait];
-      bool upper = gait == ResidualFn::kGaitGallop ||
-                   com_speed <= ResidualFn::kGaitAuto[gait + 1];
+      bool upper = com_speed <= ResidualFn::kGaitAuto[gait + 1];
       bool wait = mju_abs(residual_.gait_switch_time_ - data->time) >
                   ResidualFn::kAutoGaitMinTime;
       if (lower && upper && wait) {

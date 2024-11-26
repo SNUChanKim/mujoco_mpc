@@ -16,7 +16,7 @@
 
     <!-- residual -->
     <numeric name="residual_select_Gait" data="2"/>
-    <text name="residual_list_Gait" data="Stand|Walk|Trot|Canter|Gallop"/>
+    <text name="residual_list_Gait" data="Stand|Walk|Trot"/>
     <numeric name="residual_select_Gait switch" data="0"/>
     <text name="residual_list_Gait switch" data="Manual|Automatic"/>
     <numeric name="residual_Walk speed" data="0 0 1"/>
