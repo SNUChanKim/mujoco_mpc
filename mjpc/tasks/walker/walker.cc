@@ -24,11 +24,11 @@ namespace mjpc {
 std::string Walker::XmlPath() const {
   return GetModelPath("walker/task.xml");
 }
-std::string WalkerObstacle::XmlPath() const {
-  return GetModelPath("walker/task_obstacle.xml");
+std::string WalkerTunnel::XmlPath() const {
+  return GetModelPath("walker/task_tunnel.xml");
 }
 std::string Walker::Name() const { return "Walker"; }
-std::string WalkerObstacle::Name() const { return "Walker Obstacle"; }
+std::string WalkerTunnel::Name() const { return "Walker Tunnel"; }
 // --------- Residuals for walker task --------
 //   Number of residuals: 4
 //     Residual (0): control

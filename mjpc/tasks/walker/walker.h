@@ -54,7 +54,7 @@ class Walker : public Task {
 
 };
 
-class WalkerObstacle : public Walker {
+class WalkerTunnel : public Walker {
   public:
     std::string Name() const override;
     std::string XmlPath() const override;
