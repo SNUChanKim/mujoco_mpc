@@ -53,12 +53,11 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
   double* goal_pos = data->mocap_pos + 3*goal_mocap_id_;
   double* compos = SensorByName(model, data, "torso_subtreecom");
   double height_goal = parameters_[ParameterIndex(model, "Height Goal")];
+  double uprightness = parameters_[ParameterIndex(model, "Uprightness")];
 
   // ---------- Upright ----------
   if (current_mode_ == kModeBiped || height_goal > kHeightBiped) {
-    double biped_type = parameters_[biped_type_param_id_];
-    int handstand = ReinterpretAsInt(biped_type) ? -1 : 1;
-    residual[counter++] = torso_xmat[6] - handstand;
+    residual[counter++] = torso_xmat[6] - uprightness;
   } else {
     residual[counter++] = torso_xmat[8] - 1;
   }
@@ -98,7 +97,7 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
   for (A1Foot foot : kFootAll) {
     if (is_biped || height_goal > kHeightBiped) {
       // ignore "hands" in biped mode
-      bool handstand = ReinterpretAsInt(parameters_[biped_type_param_id_]);
+      bool handstand = uprightness < 0;
       bool front_hand = !handstand && (foot == kFootFL || foot == kFootFR);
       bool back_hand = handstand && (foot == kFootHL || foot == kFootHR);
       if (front_hand || back_hand) {
@@ -140,7 +139,7 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
   }
   if (current_mode_ == kModeBiped || height_goal > kHeightBiped) {
     // loosen the "hands" in Biped mode
-    bool handstand = ReinterpretAsInt(parameters_[biped_type_param_id_]);
+    bool handstand = uprightness < 0;
     if (handstand) {
       residual[counter + 4] *= 0.03;
       residual[counter + 5] *= 0.03;
@@ -159,10 +158,8 @@ void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
   // ---------- Yaw ----------
   double torso_heading[2] = {torso_xmat[0], torso_xmat[3]};
   if (current_mode_ == kModeBiped || height_goal > kHeightBiped) {
-    int handstand =
-        ReinterpretAsInt(parameters_[biped_type_param_id_]) ? 1 : -1;
-    torso_heading[0] = handstand * torso_xmat[2];
-    torso_heading[1] = handstand * torso_xmat[5];
+    torso_heading[0] = uprightness * torso_xmat[2];
+    torso_heading[1] = uprightness * torso_xmat[5];
   }
   mju_normalize(torso_heading, 2);
   double heading_goal = kHeading;
@@ -313,6 +310,7 @@ constexpr float kPcpRgba[4] = {0.5, 0.5, 0.2, 1};   // projected capture point
 void QuadrupedFlat::ModifyScene(const mjModel* model, const mjData* data,
                            mjvScene* scene) const {
   double height_goal = parameters[ParameterIndex(model, "Height Goal")];
+  double uprightness = parameters[ParameterIndex(model, "Uprightness")];
 
   // current foot positions
   double* foot_pos[ResidualFn::kNumFoot];
@@ -344,8 +342,7 @@ void QuadrupedFlat::ModifyScene(const mjModel* model, const mjData* data,
     stance_pos[foot][2] = ResidualFn::kFootRadius + ground[foot];
     if (residual_.current_mode_ == ResidualFn::kModeBiped || height_goal > ResidualFn::kHeightBiped) {
       // skip "hands" in biped mode
-      bool handstand =
-          ReinterpretAsInt(parameters[residual_.biped_type_param_id_]);
+      bool handstand = uprightness < 0;
       bool front_hand = !handstand && (foot == ResidualFn::kFootFL ||
                                        foot == ResidualFn::kFootFR);
       bool back_hand = handstand && (foot == ResidualFn::kFootHL ||
@@ -410,7 +407,6 @@ void QuadrupedFlat::ResetLocked(const mjModel* model) {
   // ----------  task identifiers  ----------
   residual_.gait_param_id_ = ParameterIndex(model, "select_Gait");
   residual_.gait_switch_param_id_ = ParameterIndex(model, "select_Gait switch");
-  residual_.biped_type_param_id_ = ParameterIndex(model, "select_Biped type");
   residual_.balance_cost_id_ = CostTermByName(model, "Balance");
   residual_.upright_cost_id_ = CostTermByName(model, "Upright");
   residual_.height_cost_id_ = CostTermByName(model, "Height");
@@ -452,8 +448,9 @@ void QuadrupedFlat::ResidualFn::AverageFootPos(
     const mjModel* model, double avg_foot_pos[3], double* foot_pos[kNumFoot]) const {
   
   double height_goal = parameters_[ParameterIndex(model, "Height Goal")];
+  double uprightness = parameters_[ParameterIndex(model, "Uprightness")];
   if (current_mode_ == kModeBiped || height_goal > kHeightBiped) {
-    int handstand = ReinterpretAsInt(parameters_[biped_type_param_id_]);
+    int handstand = uprightness < 0;
     if (handstand) {
       mju_add3(avg_foot_pos, foot_pos[kFootFL], foot_pos[kFootFR]);
     } else {

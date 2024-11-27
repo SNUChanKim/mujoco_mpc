@@ -173,7 +173,6 @@ class QuadrupedFlat : public Task {
     int goal_mocap_id_        = -1;
     int gait_param_id_        = -1;
     int gait_switch_param_id_ = -1;
-    int biped_type_param_id_  = -1;
     
     // int cadence_param_id_     = -1;
     // int amplitude_param_id_   = -1;
