@@ -72,6 +72,7 @@ std::vector<std::shared_ptr<Task>> GetTasks() {
       std::make_shared<QuadrupedObstacle>(),
       std::make_shared<Swimmer>(),
       std::make_shared<Walker>(),
+      std::make_shared<WalkerObstacle>(),
   };
 }
 }  // namespace mjpc

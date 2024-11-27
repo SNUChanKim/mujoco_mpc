@@ -53,6 +53,13 @@ class Walker : public Task {
   ResidualFn residual_;
 
 };
+
+class WalkerObstacle : public Walker {
+  public:
+    std::string Name() const override;
+    std::string XmlPath() const override;
+};
+
 }  // namespace mjpc
 
 #endif  // MJPC_TASKS_WALKER_WALKER_H_

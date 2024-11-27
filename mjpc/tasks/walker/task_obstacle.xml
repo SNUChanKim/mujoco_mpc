@@ -25,6 +25,18 @@
     <numeric name="batch_scale_prior" data="1.0e-3" />
   </custom>
 
+  <worldbody>
+    <body name="box" mocap="true" pos="8.0 0 1.0">
+      <geom name="box" class="prop" conaffinity="1" size="5.0 0.8 0.05"/>
+    </body>
+  </worldbody>
+
+  <default>
+    <default class="prop">
+      <geom type="box" rgba="0 0.4 1 1"/>
+    </default>
+  </default>
+
   <sensor>
     <!-- cost -->
     <user name="Control" dim="6" user="0 0.1 0.0 1.0" />
