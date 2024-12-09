@@ -261,8 +261,16 @@ void QuadrupedFlat::TransitionLocked(mjModel* model, mjData* data) {
     double forward[2] = {torso_xmat[0], torso_xmat[3]};
     mju_normalize(forward, 2);
     double leftward[2] = {-forward[1], forward[0]};
+    
+    // compute and save rotation axis / walk origin
+    double axis[2] = {data->xpos[3*residual_.torso_body_id_],
+                    data->xpos[3*residual_.torso_body_id_+1]};
 
     // switching into Walk or parameters changed, reset task state
+
+    residual_.current_position_[0] = axis[0];
+    residual_.current_position_[1] = axis[1];
+
     if (mode != residual_.current_mode_ || residual_.angvel_ != angvel ||
         residual_.speed_ != speed) {
       // save time
@@ -272,9 +280,6 @@ void QuadrupedFlat::TransitionLocked(mjModel* model, mjData* data) {
       residual_.speed_ = speed;
       residual_.angvel_ = angvel;
 
-      // compute and save rotation axis / walk origin
-      double axis[2] = {data->xpos[3*residual_.torso_body_id_],
-                        data->xpos[3*residual_.torso_body_id_+1]};
       if (mju_abs(angvel) > ResidualFn::kMinAngvel) {
         // don't allow turning with very small angvel
         double d = speed / angvel;
@@ -287,6 +292,12 @@ void QuadrupedFlat::TransitionLocked(mjModel* model, mjData* data) {
       // save vector from axis to initial goal position
       residual_.heading_[0] = goal_pos[0] - axis[0];
       residual_.heading_[1] = goal_pos[1] - axis[1];
+
+      if (!residual_.initial_heading_set_) {
+        residual_.initial_heading_[0] = residual_.heading_[0];
+        residual_.initial_heading_[1] = residual_.heading_[1];
+        residual_.initial_heading_set_ = true;
+      }
     }
 
     // move goal
@@ -474,9 +485,7 @@ double QuadrupedFlat::ResidualFn::GetPhase(double time) const {
 void QuadrupedFlat::ResidualFn::Walk(double pos[2], double time) const {
   if (mju_abs(angvel_) < kMinAngvel) { // just move forward
     // no rotation, go in straight line
-    double forward[2] = {heading_[0], heading_[1]};
-    mju_normalize(forward, 2);
-    pos[0] = position_[0] + heading_[0] + time*speed_;
+    pos[0] = current_position_[0] + initial_heading_[0] + 1.0*speed_;
     pos[1] = 0;
   } else {
     // walk on a circle

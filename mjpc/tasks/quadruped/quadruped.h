@@ -155,9 +155,12 @@ class QuadrupedFlat : public Task {
     double position_[3]       = {0};
 
     // walk states
+    double initial_heading_[2] = {0};
+    double current_position_[3] = {0};
     double heading_[2]        = {0};
     double speed_             = 0;
     double angvel_            = 0;
+    bool initial_heading_set_ = false;
 
     // gait-related states
     double current_gait_      = kGaitStand;

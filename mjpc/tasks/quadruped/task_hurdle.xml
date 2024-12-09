@@ -20,7 +20,7 @@
     <numeric name="residual_select_Gait switch" data="0"/>
     <text name="residual_list_Gait switch" data="Manual|Automatic"/>
     <numeric name="residual_Walk speed" data="0 0 1"/>
-    <numeric name="residual_Walk turn" data="0 -2 2"/>
+    <numeric name="residual_Walk turn" data="0 -1 1"/>
     <numeric name="residual_Height Goal" data="0.25 0 2.0" />
     <numeric name="residual_Uprightness" data="0.0 -1.0 1.0" />
 
